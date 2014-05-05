@@ -1,15 +1,16 @@
 var test = require("tap").test;
 var fs = require('fs');
 var common = require("../lib/common");
-var async = require("async");
 var extend = require('util')._extend;
-var events = require('events');
 
 certificate = process.env.CERIFICATE || 0;
 
-//	
 
-/*
+
+/* https://github.com/membase/ns_server/blob/master/src/menelaus_web.erl
+ 
+    Method when Method =:= 'GET'; Method =:= 'HEAD' ->
+ 
                          D[] ->
                              {done, redirect_permanently("/index.html", Req)};
                          D["versions"] ->
@@ -178,7 +179,7 @@ if (certificate) {
 test("GET 301", function (t) {
     paths = ["/"];
 
-    sendRequests(t, paths, request_options, 301, false, function () {
+    common.sendRequests(t, paths, request_options, 301, false, function () {
 
     });
 });
@@ -190,7 +191,7 @@ test("GET 301 with Auth", function (t) {
 
     paths = ["/"];
 
-    sendRequests(t, paths, options, 301, false, function () {
+    common.sendRequests(t, paths, options, 301, false, function () {
 
     });
 });
@@ -213,7 +214,7 @@ test("GET 200", function (t) {
         "/index.html", //["index.html"] ->
 
     ];
-    sendRequests(t, paths, request_options, 200, false, function () {
+    common.sendRequests(t, paths, request_options, 200, false, function () {
 
     });
 });
@@ -271,7 +272,7 @@ test("GET 200 with Auth", function (t) {
 
 
     ];
-    sendRequests(t, paths, options, 200, false, function () {
+    common.sendRequests(t, paths, options, 200, false, function () {
 
     });
 });
@@ -283,7 +284,7 @@ test("GET 200 stream", function (t) {
         "/pools/default/bucketsStreaming/default", //["pools", "default", "bucketsStreaming", Id] ->
         "/pools/default/bs/default", //["pools", "default", "bs", BucketName] ->
     ];
-    sendRequests(t, paths, request_options, 200, true, function () {
+    common.sendRequests(t, paths, request_options, 200, true, function () {
 
     });
 });
@@ -295,7 +296,7 @@ test("GET 401 stream", function (t) {
         "/pools/default/saslBucketsStreaming", //["pools", "default", "saslBucketsStreaming"] ->
         "/diag/masterEvents", //["diag", "masterEvents"] -> {auth, fun handle_diag_master_events/1};
     ];
-    sendRequests(t, paths, request_options, 401, true, function () {
+    common.sendRequests(t, paths, request_options, 401, true, function () {
 
     });
 });
@@ -311,7 +312,7 @@ test("GET 200 stream with Auth", function (t) {
         "/pools/default/bs/default", //["pools", "default", "bs", BucketName] ->
         "/diag/masterEvents", //["diag", "masterEvents"] -> {auth, fun handle_diag_master_events/1}; //TODO FATAL ERROR: JS Allocation failed - process out of memory
     ];
-    sendRequests(t, paths, options, 200, true, function () {
+    common.sendRequests(t, paths, options, 200, true, function () {
 
     });
 });
@@ -361,7 +362,7 @@ test("GET 401", function (t) {
 
 
     ];
-    sendRequests(t, paths, request_options, 401, false, function () {
+    common.sendRequests(t, paths, request_options, 401, false, function () {
 
     });
 });
@@ -383,7 +384,7 @@ test("GET 404 with Auth", function (t) {
         "/dot/FAKE", //["dot", Bucket] ->
         "/dotsvg/FAKE", //["dotsvg", Bucket] ->
     ];
-    sendRequests(t, paths, options, 404, false, function () {
+    common.sendRequests(t, paths, options, 404, false, function () {
 
     });
 });
@@ -397,26 +398,7 @@ test("GET 500 Internal Server Error with Auth", function (t) {
     paths = [
                 "/diag/vbuckets", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1}; MB-10977 bucket is not specified
     ];
-    sendRequests(t, paths, options, 500, false, function () {
+    common.sendRequests(t, paths, options, 500, false, function () {
 
     });
 });
-
-
-
-function sendRequests(t, paths, options, status, stream) {
-    async.times(paths.length, function (i, next) {
-            obj = extend({}, options);
-            console.log(paths[i]);
-            obj.path = paths[i];
-            common.get_api(t, protocol, obj, status, stream, function (callback) {}, next);
-        }, function () {},
-        setTimeout(function () {
-            console.log("sleep 5 sec");
-            t.end();
-        }, (function () {
-
-            return 5000;
-        })())
-    );
-}
