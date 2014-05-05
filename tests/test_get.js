@@ -164,7 +164,7 @@ var request_options = {
 
 
 if (certificate) {
-    request_options.ca = [fs.readFileSync('../cacert.pem')];
+    request_options.ca = [fs.readFileSync('./cacert.pem')];
     protocol = require('https');
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
     request_options.agent = false;

@@ -3,16 +3,16 @@ var fs = require('fs');
 var common = require("../lib/common");
 var extend = require('util')._extend;
 
-certificate = process.env.CERIFICATE || 1;
+certificate = process.env.CERIFICATE || 0;
 
 
 /* https://github.com/membase/ns_server/blob/master/src/menelaus_web.erl
   
   'POST' ->
                      case PathTokens of
-                         ["uilogin"] ->
+                         D["uilogin"] ->
                              {done, handle_uilogin(Req)};
-                         ["uilogout"] ->
+                         D["uilogout"] ->
                              {done, handle_uilogout(Req)};
                          ["sampleBuckets", "install"] ->
                              {auth, fun handle_post_sample_buckets/1};
@@ -104,7 +104,7 @@ certificate = process.env.CERIFICATE || 1;
                          ["pools", "default", "buckets", Id, "controller", "doFlush"] ->
                              {auth_bucket_mutate,
                               fun menelaus_web_buckets:handle_bucket_flush/3, ["default", Id]};
-                         ["pools", "default", "buckets", Id, "controller", "compactBucket"] ->
+                         D["pools", "default", "buckets", Id, "controller", "compactBucket"] ->
                              {auth_check_bucket_uuid,
                               fun menelaus_web_buckets:handle_compact_bucket/3, ["default", Id]};
                          ["pools", "default", "buckets", Id, "controller", "unsafePurgeBucket"] ->
@@ -163,19 +163,52 @@ certificate = process.env.CERIFICATE || 1;
 */
 
 
-var request_options = {
+var post_options = {
 	    host: 'localhost',
+	    method : 'POST',
+	    headers: {'Content-Type' : 'application/x-www-form-urlencoded'}
+
 	};
 
 
 	if (certificate) {
-	    request_options.ca = [fs.readFileSync('../cacert.pem')];
+		post_options.ca = [fs.readFileSync('./cacert.pem')];
 	    protocol = require('https');
 	    process.env.NODE_TLS_REJECT_UNAUTHORIZED = 0;
-	    request_options.agent = false;
-	    request_options.port = 18091;
+	    post_options.agent = false;
+	    post_options.port = 18091;
 	} else {
 	    protocol = require('http');
-	    request_options.port = 8091;
+	    post_options.port = 8091;
 	    //	request_options.agent = false;
 	}
+
+
+	test("POST uilogin/uilogout", function (t) {
+	    options = extend({}, post_options);
+	    paths = ["/uilogin", //["uilogin"] ->
+	             "/uilogout", //["uilogout"] ->
+
+	    ];
+	    post_data = ["user=Administrator&password=password",
+	                 "user=Administrator&password=password"
+	                 ];
+
+	    common.sendPostRequests(t, paths, post_data, options, 200, false, function () {
+
+	    });
+	});
+
+	test("POST 200 with Auth", function (t) {
+	    options = extend({}, post_options);
+	    options.auth = "Administrator:password";
+
+	    paths = ["/pools/default/buckets/default/controller/compactDatabases", //["pools", "default", "buckets", Id, "controller", "compactDatabases"] ->
+
+	    ];
+	    post_data = ["",];
+
+	    common.sendPostRequests(t, paths, post_data, options, 200, false, function () {
+
+	    });
+	});
