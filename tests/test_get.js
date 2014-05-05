@@ -123,13 +123,13 @@ certificate = process.env.CERIFICATE || 0;
                              {done, handle_node_self_xdcr_ssl_ports(Req)};
                          DC["diag"] ->
                              {auth_special, fun diag_handler:handle_diag/1, []};
-                         DB["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};
+                         D["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};
                          D["diag", "masterEvents"] -> {auth, fun handle_diag_master_events/1};
-                         ["pools", "default", "rebalanceProgress"] ->
+                         D["pools", "default", "rebalanceProgress"] ->
                              {auth_ro, fun handle_rebalance_progress/2, ["default"]};
-                         ["pools", "default", "tasks"] ->
+                         D["pools", "default", "tasks"] ->
                              {auth_ro, fun handle_tasks/2, ["default"]};
-                         ["index.html"] ->
+                         D["index.html"] ->
                              {done, serve_static_file(Req, {AppRoot, Path},
                                                       "text/html; charset=utf8",
                                                       [{"Pragma", "no-cache"},
@@ -137,11 +137,11 @@ certificate = process.env.CERIFICATE || 0;
                          ["docs" | _PRem ] ->
                              DocFile = string:sub_string(Path, 6),
                              {done, Req:serve_file(DocFile, DocRoot)};
-                         ["dot", Bucket] ->
+                         D["dot", Bucket] ->
                              {auth, fun handle_dot/2, [Bucket]};
-                         ["dotsvg", Bucket] ->
+                         D["dotsvg", Bucket] ->
                              {auth, fun handle_dotsvg/2, [Bucket]};
-                         ["sasl_logs"] ->
+                         D["sasl_logs"] ->
                              {auth, fun diag_handler:handle_sasl_logs/1, []};
                          ["sasl_logs", LogName] ->
                              {auth, fun diag_handler:handle_sasl_logs/2, [LogName]};
@@ -151,7 +151,7 @@ certificate = process.env.CERIFICATE || 0;
                              {done, Req:serve_file(Path, AppRoot,
                                                    [{"Cache-Control", "max-age=30000000"}])};
                          ["couchBase" | _] -> {done, capi_http_proxy:handle_proxy_req(Req)};
-                         ["sampleBuckets"] -> {auth_ro, fun handle_sample_buckets/1};
+                         D["sampleBuckets"] -> {auth_ro, fun handle_sample_buckets/1};
                          _ ->
                              {done, Req:serve_file(Path, AppRoot,
                                                    [{"Cache-Control", "max-age=10"}])} 
@@ -210,6 +210,7 @@ test("GET 200", function (t) {
         "/pools/default/b/default", //["pools", "default", "b", BucketName] ->
         "/pools/default/certificate", //["pools", "default", "certificate"] ->
         "/nodes/self/xdcrSSLPorts", // ["nodes", "self", "xdcrSSLPorts"] ->
+        "/index.html", //["index.html"] ->
 
     ];
     sendRequests(t, paths, request_options, 200, false, function () {
@@ -237,7 +238,7 @@ test("GET 200 with Auth", function (t) {
         "/pools/default/buckets/default/statsDirectory", //["pools", "default", "buckets", Id, "statsDirectory"] ->
         "/pools/default/b/default", //["pools", "default", "b", BucketName] ->
         "/pools/default/buckets/default/nodes", // ["pools", "default", "buckets", Id, "nodes"] ->
-        "/pools/default/buckets/default/nodes/127.0.0.1%3A8091", // ["pools", "default", "buckets", Id, "nodes", NodeId] -> //TODO bettter take from config
+        "/pools/default/buckets/default/nodes/127.0.0.1%3A8091", // ["pools", "default", "buckets", Id, "nodes", NodeId] -> //TODO better take from config
         "/pools/default/buckets/default/nodes/127.0.0.1%3A8091/stats", //["pools", "default", "buckets", Id, "nodes", NodeId, "stats"] ->
         //        "/pools/default/buckets/default/recoveryStatus",//["pools", "default", "buckets", Id, "recoveryStatus"] ->//TODO Q TO ALK: 400 {"code":"uuid_missing"}
         "/pools/default/remoteClusters", //["pools", "default", "remoteClusters"] ->
@@ -250,18 +251,23 @@ test("GET 200 with Auth", function (t) {
         "/settings/alerts", //["settings", "alerts"] ->
         "/settings/stats", //["settings", "stats"] ->
         "/settings/autoFailover", //["settings", "autoFailover"] ->
-        //"/settings/maxParallelIndexers", //["settings", "maxParallelIndexers"] -> TODO MB-10976
+        "/settings/maxParallelIndexers", //["settings", "maxParallelIndexers"] -> MB-10976
         "/settings/viewUpdateDaemon", //["settings", "viewUpdateDaemon"] ->
         "/settings/autoCompaction", //["settings", "autoCompaction"] ->
         "/settings/replications", //["settings", "replications"] ->
         "/internalSettings", //["internalSettings"] ->
         "/internalSettings/visual", //["internalSettings", "visual"] ->
         "/nodes/ns_1@127.0.0.1", // ["nodes", NodeId] ->
-        "/nodes/self/xdcrSSLPorts", // ["nodes", "self", "xdcrSSLPorts"] ->
+        "/nodes/self/xdcrSSLPorts", //["nodes", "self", "xdcrSSLPorts"] ->
         //        "/diag", //["diag"] ->
-        //        "/diag/vbuckets", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};MB-10977
-
-
+        "/diag/vbuckets?bucket=default", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};
+        "/pools/default/rebalanceProgress", // ["pools", "default", "rebalanceProgress"] ->
+        "/pools/default/tasks", //["pools", "default", "tasks"] ->
+        "/index.html", //["index.html"] ->
+        "/dot/default",//["dot", Bucket] ->
+        "/dotsvg/default", //["dotsvg", Bucket] ->
+        "/sampleBuckets", //["sampleBuckets"] -> {auth_ro, fun handle_sample_buckets/1};
+        "/sasl_logs", //["sasl_logs"] ->
 
 
     ];
@@ -312,7 +318,6 @@ test("GET 200 stream with Auth", function (t) {
 
 
 
-
 test("GET 401", function (t) {
 
     paths = [
@@ -346,6 +351,13 @@ test("GET 401", function (t) {
         "/nodes/ns_1@127.0.0.1", // ["nodes", NodeId] ->
         "/diag", //["diag"] ->
         "/diag/vbuckets", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};
+        "/diag/vbuckets?bucket=default", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1};
+        "/pools/default/rebalanceProgress", //["pools", "default", "rebalanceProgress"] ->
+        "/pools/default/tasks", //["pools", "default", "tasks"] ->
+        "/dot/default", //["dot", Bucket] ->
+        "/dotsvg/default", //["dotsvg", Bucket] ->
+        "/sampleBuckets", //["sampleBuckets"] -> {auth_ro, fun handle_sample_buckets/1};
+        "/sasl_logs", //["sasl_logs"] ->
 
 
     ];
@@ -368,8 +380,24 @@ test("GET 404 with Auth", function (t) {
         "/settings/replications/FAKE", //["settings", "replications", XID] -> //TODO add real XID
         "/settings/readOnlyAdminName", //["settings", "readOnlyAdminName"] -> //TODO add read ROuser
         "/nodes/FAKE", // ["nodes", NodeId] ->
+        "/dot/FAKE", //["dot", Bucket] ->
+        "/dotsvg/FAKE", //["dotsvg", Bucket] ->
     ];
     sendRequests(t, paths, options, 404, false, function () {
+
+    });
+});
+
+
+
+test("GET 500 Internal Server Error with Auth", function (t) {
+    options = extend({}, request_options);
+    options.auth = "Administrator:password";
+
+    paths = [
+                "/diag/vbuckets", //["diag", "vbuckets"] -> {auth, fun handle_diag_vbuckets/1}; MB-10977 bucket is not specified
+    ];
+    sendRequests(t, paths, options, 500, false, function () {
 
     });
 });
@@ -384,11 +412,11 @@ function sendRequests(t, paths, options, status, stream) {
             common.get_api(t, protocol, obj, status, stream, function (callback) {}, next);
         }, function () {},
         setTimeout(function () {
-            console.log("sleep 3 sec");
+            console.log("sleep 5 sec");
             t.end();
         }, (function () {
 
-            return 2000;
+            return 5000;
         })())
     );
 }
